@@ -31,7 +31,8 @@ class Builder:
     def __init__(self, soc, output_dir=None,
                  compile_software=True, compile_gateware=True,
                  gateware_toolchain_path=None,
-                 csr_csv=None):
+                 csr_csv=None,
+                 csr_py =None):
         self.soc = soc
         if output_dir is None:
             output_dir = "soc_{}_{}".format(
@@ -44,6 +45,7 @@ class Builder:
         self.compile_gateware = compile_gateware
         self.gateware_toolchain_path = gateware_toolchain_path
         self.csr_csv = csr_csv
+        self.csr_py  = csr_py
 
         self.software_packages = []
         for name in soc_software_packages:
@@ -110,6 +112,19 @@ class Builder:
         write_to_file(
             self.csr_csv,
             cpu_interface.get_csr_csv(csr_regions, constants, memory_regions))
+    
+    #Support of python
+    def _generate_csr_py(self):
+        memory_regions = self.soc.get_memory_regions()
+        csr_regions = self.soc.get_csr_regions()
+        constants = self.soc.get_constants()
+
+        csr_dir = os.path.dirname(os.path.realpath(self.csr_py))
+        os.makedirs(csr_dir, exist_ok=True)
+        write_to_file(
+            self.csr_py,
+            cpu_interface.get_csr_py(csr_regions, constants, memory_regions))
+
 
     def _prepare_software(self):
         for name, src_dir in self.software_packages:
@@ -157,6 +172,9 @@ class Builder:
 
         if self.csr_csv is not None:
             self._generate_csr_csv()
+        
+        if self.csr_py is not None:
+            self._generate_csr_py()
 
         if self.gateware_toolchain_path is not None:
             toolchain_path = self.gateware_toolchain_path
@@ -184,6 +202,9 @@ def builder_args(parser):
     parser.add_argument("--csr-csv", default=None,
                         help="store CSR map in CSV format into the "
                              "specified file")
+    parser.add_argument("--csr-py", default=None,
+                        help="store CSR map as python code into the "
+                             "specified file")
 
 
 def builder_argdict(args):
@@ -192,5 +213,6 @@ def builder_argdict(args):
         "compile_software": not args.no_compile_software,
         "compile_gateware": not args.no_compile_gateware,
         "gateware_toolchain_path": args.gateware_toolchain_path,
-        "csr_csv": args.csr_csv
+        "csr_csv": args.csr_csv,
+        "csr_py": args.csr_py
     }
